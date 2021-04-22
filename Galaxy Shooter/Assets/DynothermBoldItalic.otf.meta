@@ -1,0 +1,25 @@
+fileFormatVersion: 2
+guid: be5ddf2a632010e4bb473f79ed6fa1af
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Dynotherm
+  fontNames:
+  - Dynotherm
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: fcb3644796d28c5428d02c1ba61c2a30, type: 3}
+  - {fileID: 12800000, guid: 58ca34d9a3594844bbae59f11a729235, type: 3}
+  - {fileID: 12800000, guid: fbbb805b335719940869ccf3c614973f, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
