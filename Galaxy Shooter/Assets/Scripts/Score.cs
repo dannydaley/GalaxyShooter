@@ -5,28 +5,30 @@ using UnityEngine;
 
 public class Score : MonoBehaviour
 {
+    /// <summary>
+    /// this script handles the score over distance travlled by the player GameObject,
+    /// a reducer is applied to avoid massive numbers
+    /// </summary>
+    /// 
+
+    //current score
     public int score = 0;
 
+    //Player gameobject
     public GameObject player;
 
-    public GameObject scoreText;
+    //Text slot for score on screen
+    public Text scoreText;
 
-
+    //Score reducer
+    public int scoreReducer = 1000;
+    
     private void FixedUpdate()
     {
-        score += ((int)player.transform.GetComponent<Movement>().forwardMovement / 10);
-        scoreText.transform.GetComponent<TMPro.TextMeshProUGUI>().text = score.ToString();
-           
-    }
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+        //increment the score by (distance travelled along the z axis / the scoreReducer)
+        score += ((int)player.transform.GetComponent<Movement>().forwardMovement / scoreReducer);
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        //update the onscreen score with the new score
+        scoreText.transform.GetComponent<Text>().text = score.ToString();           
     }
 }

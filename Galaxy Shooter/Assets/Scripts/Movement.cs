@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Uduino;
@@ -12,7 +11,10 @@ public class Movement : MonoBehaviour
     public GameObject spacePlanes;
 
     public int spacePlanesDistance;
+
     //public Transform distancePlane;
+
+    //Player game object
     public GameObject ship;
 
     //Text for Score counter
@@ -21,13 +23,14 @@ public class Movement : MonoBehaviour
     //Global HP variable
     public int hp = 100;
 
+    //Slider for onscreen hp
+    public Slider HPSlider;
+
+    //Animation prefab for when player dies
     public GameObject DeathExposion;
 
+    //Animation prefab for when player gets hit
     public GameObject HitExplosion;
-
-    //Text for Hp
-    public GameObject HPText;
-
 
     //forward movement
     public float forwardMovement = 0;
@@ -41,44 +44,55 @@ public class Movement : MonoBehaviour
     //if true control for movement will look for uduino input
     public bool UseUduino;
 
-
-
+    //float XY data smoothing to reduce anomoles
     public float XYSmoothing;
-
-
-    //data coming from uduino sketch
-    float d = 0;
 
     //Right sensor reading
     float R;
+
     //left sensor reading
     float L;
 
-    
+    //smoothed left sensor value
     float smoothL;
 
+    //smooth right sensor value
     float smoothR;
 
+    public GameObject FadeOutPrefab;
+
+    //screen that displays when pausing
+    public GameObject PauseScreen;
+
+    //game object that handles scene loading and pausing
+    public GameObject SceneLoader;
+
+    #region Smoothing variables
+    //left velocity
     float Lvelocity;
 
+    //right velocity
     float Rvelocity;
 
+    //smooth time
     public float smoothTime;
 
+    //enable smoothing
     public bool enableSmooth = false;
+
+    //hide when too far
     public bool hideWhenTooFar = false;
+    #endregion
 
-    //Observed Min and Max reading from sensors (for quick reference in editor only)
-    public float MinReading = 0;
-    public float MaxReading = 160;
-
-    //Value for distance to trigger ascent
+    #region variables control distances and tolerances
+    //Value for distance to trigger ascent (close hands to controller trigger ascent)
     public float Ascent;
 
-    //value for distance to trigger descent
+    //value for distance to trigger descent (far hands from controller triggers descent
     public float Descent;
 
-    //value for tolerance of difference in L and R values
+    
+    //value for tolerance of difference in L and R values, this allows a threshold for straight flight without banking
     public float Tolerance;
 
     //value for difference in values to trigger banking
@@ -88,15 +102,18 @@ public class Movement : MonoBehaviour
     public int leftPotValue = 0;
     public int rightPotValue = 0;
 
+
+    //maximum distances hands can be from controller
     public float maxDistance = 200;
 
+    #endregion
 
 
 
     void Start()
     {
+        //Check data coming in from the control-deck
         UduinoManager.Instance.OnDataReceived += DataReceived;
-
     }
 
 
@@ -111,14 +128,15 @@ public class Movement : MonoBehaviour
         if (data[0].ToString() == "R") //check if first letter of data is "R"
         {           
             R = float.Parse(data.Substring(1)); // removes first letter from the STRING of data and parses it to float
-            //Debug.Log(R);   //print value of R to console
-
+            
+            //Smooths the value coming from the right sensor to reduce anomoles and twitchy flight
             smoothR = Mathf.SmoothDamp(smoothR, R, ref Rvelocity, smoothTime);
         }
         else if (data[0].ToString() == "L")    //check if first letter of data is "L"
         {
             L = float.Parse(data.Substring(1)); // removes first letter from the STRING of data and parses it to float
-                                                //Debug.Log(L);   //print value of L to console
+                       
+            //Smooths the value coming from the left sensor to reduce anomoles and twitchy flight
             smoothL = Mathf.SmoothDamp(smoothL, L, ref Lvelocity, smoothTime);
         }
     }
@@ -133,14 +151,12 @@ public class Movement : MonoBehaviour
         {
             if (ship.transform.position.y > 10)
             {
-
                 return;
             }
             else
             {                              
                 //Add force to ship along the Y Axis
                 ship.transform.GetComponent<Rigidbody>().AddForce(0, sensitivity, 0, ForceMode.Acceleration);
-
             }
         }
         else if (Input.GetButton("Down")  || (UseUduino && smoothL >= Descent && smoothR >= Descent))   // if down arrow key is pressed 
@@ -185,12 +201,21 @@ public class Movement : MonoBehaviour
     //Fixed update to handle hp
     private void FixedUpdate()
     {
-        HPText.transform.GetComponent<TMPro.TextMeshProUGUI>().text = hp.ToString();
+        //background moves forward with ship
         spacePlanes.transform.position = new Vector3(0, 0,ship.transform.position.z + spacePlanesDistance);
     }
 
     void Update()
     {
+        //update the hp bar with hp value
+        HPSlider.value = hp;
+
+        if (Input.GetButton("Pause"))
+        {
+            PauseScreen.SetActive(true);
+            SceneLoader.transform.GetComponent<LoadScenes>().PauseGame();
+        }
+
         if (hp < 1)
         {
             StartCoroutine(die());
@@ -206,34 +231,46 @@ public class Movement : MonoBehaviour
 
         //run the y position update method
         YPositionUpdate();       
-
-
     }
 
     IEnumerator die()
     {
+        //If the high score is greater than the existing hiscore
         if (this.gameObject.transform.GetComponent<Score>().score > PlayerPrefs.GetInt("HighScore", 0))
         {
+            //set the new highscore as this score
             PlayerPrefs.SetInt("HighScore", this.gameObject.transform.GetComponent<Score>().score);
         }
+        //if speed is greater than 0
         if(speed > 0)
         {
-            speed -= 0.5f;
+            //decrease speed
+            speed -= 0.1f;
         }
         else
         {
-            SceneManager.LoadScene(3);
-             
+            Instantiate(FadeOutPrefab, this.gameObject.transform.position, this.gameObject.transform.rotation);
+            yield return new WaitForSecondsRealtime(3);
+            //If speed is 1, load the death scene
+            SceneManager.LoadScene(3);             
         }
+        // spawn the death explosion animation
         Instantiate(DeathExposion, this.gameObject.transform.position, this.gameObject.transform.rotation);
+
+        //wait for 1 second
         yield return new WaitForSeconds(1f);
     }
+
+    //This method handles collisions
     private void OnTriggerEnter(Collider other)
     {
         
         if (other.gameObject.tag == "Enemy" && hp > 0)
         {
+            //spawn the hit explosion animation
             Instantiate(HitExplosion, this.gameObject.transform.position, this.gameObject.transform.rotation);
+
+            //reduce players hp
             hp -= 10;
         }
     }
